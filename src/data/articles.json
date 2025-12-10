@@ -1,0 +1,27 @@
+[
+    {
+        "id": "d12a9b2e-8a07-4f91-bcd7-b5aefc440101",
+        "title": "Pemerintah Umumkan Kebijakan Baru untuk Kendaraan Listrik",
+        "content": "Pemerintah resmi mengumumkan kebijakan insentif baru untuk mendorong penggunaan kendaraan listrik di Indonesia. Insentif ini mencakup potongan pajak dan subsidi pembelian kendaraan listrik roda dua maupun roda empat. Menteri Perhubungan menyatakan bahwa kebijakan ini diharapkan dapat mempercepat transisi menuju transportasi ramah lingkungan.",
+        "category": "tech",
+        "authorId": "a3c1e1f2-7b64-4e2c-9d4e-12fe2b912001",
+        "createdAt": "2025-03-01T10:00:00Z"
+    },
+    {
+        "id": "e39d4bd5-11e8-4a36-a113-90abffc22002",
+        "title": "Gaya Hidup Sehat Meningkat di Kalangan Anak Muda Jakarta",
+        "content": "Tren gaya hidup sehat semakin populer di Jakarta, terutama di kalangan anak muda. Banyak komunitas olahraga baru bermunculan, mulai dari lari pagi hingga kelas yoga di ruang terbuka. Menurut sejumlah pakar, meningkatnya kesadaran kesehatan dipengaruhi oleh kemudahan akses terhadap informasi kesehatan melalui media sosial.",
+        "category": "lifestyle",
+        "authorId": "b8f4c932-51d4-4b89-b29a-92a5ef1c1002",
+        "createdAt": "2025-03-05T14:20:00Z"
+    },
+    {
+        "id": "f6a88c04-6bb1-4a54-8b9d-1c61aa113003",
+        "title": "Rupiah Menguat di Tengah Pemulihan Ekonomi Global",
+        "content": "Nilai tukar rupiah menguat terhadap dolar AS seiring membaiknya kondisi ekonomi global. Analis keuangan menyebutkan bahwa kebijakan moneter yang stabil serta peningkatan ekspor turut mendorong penguatan mata uang nasional. Pemerintah optimis bahwa tren positif ini akan terus berlanjut hingga akhir tahun.",
+        "category": "finance",
+        "authorId": "c52f0a41-0e27-4d47-b4cd-cbdbb7fd3003",
+        "createdAt": "2025-03-10T09:45:00Z"
+    }
+]
+  

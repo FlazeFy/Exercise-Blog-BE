@@ -1,0 +1,18 @@
+[
+  {
+    "id": "230862fb-fdac-4a0a-b804-056899b2cd5e",
+    "name": "Michael Brown",
+    "email": "michael@example.com",
+    "password": "5e82d474ae11794886a9c815e572487c1b0f92575758dc60e1adba72bcb9496f",
+    "salt": "6957333450929ef2a7f6a42570e9e828",
+    "createdAt": "2025-12-08T07:06:35.977Z"
+  },
+  {
+    "id": "811466c7-fcc5-4f80-99a2-313a69bf8e9b",
+    "name": "Leonardho",
+    "email": "tester@gmail.com",
+    "password": "e5eca5289a37afd1314b44b6fc495887542880f53b9f2b90404e97e6521814cb",
+    "salt": "0082a7d84696ecb2d6be6eb4163a8585",
+    "createdAt": "2025-12-08T07:10:19.270Z"
+  }
+]
