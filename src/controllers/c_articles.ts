@@ -1,214 +1,226 @@
-import { Request, Response } from "express"
-import { readJsonFile, writeJsonFile } from "../helpers/database"
+import { NextFunction, Request, Response } from "express"
+import dbConfig from "../config/db"
 import { randomUUID } from "crypto"
 
-const ARTICLE_DATA = "articles.json"
-const ACCOUNT_DATA = "accounts.json"
+export const getAllArticles = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Body
+        const { category, search, authorId } = req.query
 
-export const getAllArticles = (req: Request, res: Response) => {
-    // Query param
-    const { category, search, authorId } = req.query
+        // Query
+        let getScript = `select id, title, category, authorId, createdAt from articles`
+        const params: any[] = []
+        const conditions: string[] = []
 
-    // Database
-    const articles = readJsonFile(ARTICLE_DATA)
+        // Filter by category
+        if (category){
+            params.push(String(category).toLowerCase())
+            conditions.push(`lower(category) = $${params.length}`)
+        }
 
-    // Filtering
-    let filtered = articles
+        // Filter by keyword (title or content)
+        if (search){
+            const keyword = `%${String(search).toLowerCase()}%`
+            params.push(keyword)
+            params.push(keyword)
+            conditions.push(`(lower(title) like $${params.length - 1} or lower(content) like $${params.length})`)
+        }
 
-    // Filter by category
-    if (category) {
-        filtered = filtered.filter(
-            (dt: any) => dt.category?.toLowerCase() === String(category).toLowerCase()
-        )
+        // Filter by authorId
+        if (authorId){
+            params.push(String(authorId))
+            conditions.push(`authorId = $${params.length}`)
+        }
+
+        // Join
+        if (conditions.length > 0){
+            getScript += ` where ` + conditions.join(" and ")
+        }
+
+        // Sorting
+        getScript += ' order by createdAt desc'
+
+        // Query
+        const result = await dbConfig.query(getScript, params)
+
+        // Response
+        res.status(result.rows.length > 0 ? 200 : 404).json({
+            message: `Get articles ${result.rows.length > 0 ? 'successful' : 'failed'}`,
+            data: result.rows.length > 0 ? result.rows : null,
+        })
+    } catch (error) {
+        next(error)
     }
-
-    // Filter by keyword (title or content)
-    if (search) {
-        const keyword = String(search).toLowerCase()
-        filtered = filtered.filter(
-            (dt: any) => dt.title?.toLowerCase().includes(keyword) || dt.content?.toLowerCase().includes(keyword)
-        )
-    }
-
-    // Filter by authorId
-    if (authorId) {
-        filtered = filtered.filter((dt: any) => String(dt.authorId) === String(authorId))
-    }
-
-    // Select columns
-    const mapped = filtered.map((dt: any) => ({
-        id: dt.id,
-        title: dt.title,
-        category: dt.category,
-        authorId: dt.authorId,
-        createdAt: dt.createdAt,
-    }))
-
-    // Sorting
-    const sorted = mapped.sort(
-        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-
-    // Response
-    res.status(sorted.length > 0 ? 200 : 404).json({
-        message: `Get articles ${sorted.length > 0 ? 'successful' : 'failed'}`,
-        data: sorted.length > 0 ? sorted : null,
-    })
 }
 
-export const getArticleById = (req: Request, res: Response) => {
-    // Param
-    const { id } = req.params
+export const getArticleById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Param
+        const { id } = req.params
 
-    // Database
-    const articles = readJsonFile(ARTICLE_DATA)
+        // Query
+        const getScript = `select * from articles where id = $1`
+        const result = await dbConfig.query(getScript, [id])
 
-    // Filtering
-    const article = articles.find((p: any) => p.id === id)
-    if (!article) {
-        return res.status(404).json({ 
-            message: "article not found",
-            data: null
+        if (result.rows.length === 0){
+            return res.status(404).json({
+                message: "article not found",
+                data: null
+            })
+        }
+
+        // Response
+        res.status(200).json({
+            message: "Get article successful",
+            data: result.rows[0],
         })
+    } catch (error) {
+        next(error)
     }
-
-    // Response
-    res.status(200).json({
-        message: "Get article successful",
-        data: article,
-    })
 }
 
-export const createArticle = (req: Request, res: Response) => {
-    // Body
-    const { title, category, content, authorId } = req.body
+export const createArticle = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Body
+        const { title, category, content, authorId } = req.body
 
-    // Validation: title length
-    if (!title || title.length < 3) {
-        return res.status(400).json({
-            message: "Title must be at least 3 characters",
-            data: null,
-        })
-    }
+        // Validation: title length
+        if (!title || title.length < 3) {
+            return res.status(400).json({
+                message: "Title must be at least 3 characters",
+                data: null,
+            })
+        }
 
-    // Validation: authorId must exists
-    const accounts = readJsonFile(ACCOUNT_DATA)
-    const authorExists = accounts.some((acc: any) => acc.id === authorId)
-    if (!authorExists) {
-        return res.status(400).json({
-            message: "Invalid authorId: account not found",
-            data: null,
-        })
-    }
+        // Validation: authorId must exists
+        const checkAuthorScript = `select id from author where id = $1`
+        const checkAuthor = await dbConfig.query(checkAuthorScript, [authorId])
 
-    // Database
-    const articles = readJsonFile(ARTICLE_DATA)
-
-    // Insert
-    const newArticle = {
-        id: randomUUID(),
-        title,
-        category,
-        content,
-        authorId,
-        createdAt: new Date().toISOString(),
-    }
-    articles.push(newArticle)
-
-    // Database
-    writeJsonFile(ARTICLE_DATA, articles)
-
-    // Response
-    res.status(201).json({
-        message: "Create article successful",
-        data: newArticle,
-    })
-}
-
-export const updateArticleById = (req: Request, res: Response) => {
-    // Param & Body
-    const { id } = req.params
-    const { title, category, content, authorId } = req.body
-
-    // Database
-    const articles = readJsonFile(ARTICLE_DATA)
-
-    // Filtering
-    const articleIndex = articles.findIndex((dt: any) => dt.id === id)
-    if (articleIndex === -1) {
-        return res.status(404).json({
-            message: "article not found",
-            data: null,
-        })
-    }
-
-    // Validation: title length
-    if (title && title.length < 3) {
-        return res.status(400).json({
-            message: "Title must be at least 3 characters",
-            data: null,
-        })
-    }
-
-    // Validation: authorId must exists
-    if (authorId) {
-        const accounts = readJsonFile(ACCOUNT_DATA)
-        const authorExists = accounts.some((acc: any) => acc.id === authorId)
-        if (!authorExists) {
+        if (checkAuthor.rows.length === 0) {
             return res.status(400).json({
                 message: "Invalid authorId: account not found",
                 data: null,
             })
         }
+
+        const insertScript = `
+            insert into articles (id, title, content, category, authorId)
+            values ($1, $2, $3, $4, $5)
+            returning *;
+        `
+        // Query
+        const result = await dbConfig.query(insertScript, [randomUUID(), title, content, category, authorId])
+
+        const newArticle = result.rows[0]
+
+        // Response
+        res.status(201).json({
+            message: "Create article successful",
+            data: newArticle,
+        })
+    } catch (error) {
+        next(error)
     }
-
-    // Update fields
-    const updatedArticle = {
-        ...articles[articleIndex],
-        title: title ?? articles[articleIndex].title,
-        content: content ?? articles[articleIndex].content,
-        category: category ?? articles[articleIndex].category,
-        authorId: authorId ?? articles[articleIndex].authorId,
-        updatedAt: new Date().toISOString(),
-    }
-    articles[articleIndex] = updatedArticle
-
-    // Database
-    writeJsonFile(ARTICLE_DATA, articles)
-
-    // Response
-    res.status(200).json({
-        message: "Update article successful",
-        data: updatedArticle,
-    })
 }
 
-export const deleteArticleById = (req: Request, res: Response) => {
-    // Param
-    const { id } = req.params
+export const updateArticleById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Param & Body
+        const { id } = req.params
+        const { title, category, content, authorId } = req.body
 
-    // Database
-    const articles = readJsonFile(ARTICLE_DATA)
+        // Query
+        const checkScript = `select * from articles where id = $1`
+        const checkResult = await dbConfig.query(checkScript, [id])
 
-    // Filtering
-    const articleIndex = articles.findIndex((dt: any) => dt.id === id)
-    if (articleIndex === -1) {
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "article not found",
+                data: null,
+            })
+        }
+
+        const oldArticle = checkResult.rows[0]
+
+        // Validation: title length
+        if (title && title.length < 3) {
+            return res.status(400).json({
+                message: "Title must be at least 3 characters",
+                data: null,
+            })
+        }
+
+        // Validation: authorId must exists
+        if (authorId) {
+            const checkAuthorScript = `select id from author where id = $1`
+            const authorResult = await dbConfig.query(checkAuthorScript, [authorId])
+
+            if (authorResult.rows.length === 0) {
+                return res.status(400).json({
+                    message: "Invalid authorId: account not found",
+                    data: null,
+                })
+            }
+        }
+
+        const updatedArticle = {
+            title: title ?? oldArticle.title,
+            content: content ?? oldArticle.content,
+            category: category ?? oldArticle.category,
+            authorId: authorId ?? oldArticle.authorid,
+        }
+
+        // Query
+        const updateScript = `update articles
+            set title = $1, content = $2, category = $3, authorId = $4, updatedAt = now()
+            where id = $5
+            returning *;
+        `
+        const result = await dbConfig.query(updateScript, [
+            updatedArticle.title,
+            updatedArticle.content,
+            updatedArticle.category,
+            updatedArticle.authorId,
+            id
+        ])
+
         // Response
-        return res.status(404).json({ 
-            message: "article not found",
-            data: null
+        res.status(200).json({
+            message: "Update article successful",
+            data: result.rows[0],
         })
+    } catch (error) {
+        next(error)
     }
+}
 
-    // Delete
-    const deleted = articles.splice(articleIndex, 1)
+export const deleteArticleById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Param
+        const { id } = req.params
 
-    // Database
-    writeJsonFile(ARTICLE_DATA, articles)
+        // Query
+        const checkScript = `select * from articles where id = $1`
+        const checkResult = await dbConfig.query(checkScript, [id])
 
-    // Response
-    res.status(200).json({
-        message: "Delete article successful",
-        data: deleted[0],
-    })
+        if (checkResult.rows.length === 0) {
+            // Response
+            return res.status(404).json({
+                message: "article not found",
+                data: null
+            })
+        }
+
+        // Query
+        const deleteScript = `delete from articles where id = $1 returning *`
+        const result = await dbConfig.query(deleteScript, [id])
+
+        // Response
+        res.status(200).json({
+            message: "Delete article successful",
+            data: result.rows[0],
+        })
+    } catch (error) {
+        next(error)
+    }
 }
