@@ -109,7 +109,7 @@ export const createArticle = async (req: Request, res: Response, next: NextFunct
             returning *;
         `
         // Query
-        const result = await dbConfig.query(insertScript, [randomUUID(),title, content, category,authorId])
+        const result = await dbConfig.query(insertScript, [randomUUID(), title, content, category, authorId])
 
         const newArticle = result.rows[0]
 
